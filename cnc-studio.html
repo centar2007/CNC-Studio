@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CNC Studio – GRBL 3018</title>
+<style>
+:root{--bg:#e4e7eb;--p:#fff;--b:#d5d9df;--t:#1f2933;--m:#6b7785;--a:#1e88e5;--ad:#1565c0;--ok:#2f8f5b;--er:#c4412f}
+*{box-sizing:border-box}body{margin:0;color:var(--t);font:13px/1.35 "Segoe UI",system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;background:var(--bg)}
+#top{height:50px;background:#1d2733;color:#fff;display:flex;align-items:center;gap:10px;padding:0 14px}.logo{font-size:16px;letter-spacing:.3px;margin-right:6px}.sp{flex:1}.hint2{color:#9fb0c3;font-size:12px}
+#pname{background:transparent;border:1px solid transparent;color:#fff;width:200px;padding:5px 8px;border-radius:4px}#pname:hover,#pname:focus{border-color:#47566a}
+#top button{padding:7px 16px;border-radius:5px;font-weight:600;border:1px solid #6e8197;background:transparent;color:#fff}#top .bl{background:var(--a);border-color:var(--a)}#top .bl:hover{background:var(--ad)}#top button:hover{border-color:#fff}
+#wrap{flex:1;display:flex;min-height:0;position:relative}
+#rail{width:64px;background:var(--p);border-right:1px solid var(--b);display:flex;flex-direction:column;gap:6px;padding:8px 6px}
+#rail button,#rail label.rb{height:52px;border:1px solid transparent;border-radius:6px;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:10px;color:var(--m);cursor:pointer}
+#rail button:hover,#rail label.rb:hover{background:#eef3f9;color:var(--a)}.ic{width:20px;height:20px;border:2px solid currentColor;display:block}.ic.c{border-radius:50%}.ic.h{border:0;background:currentColor;clip-path:polygon(25% 5%,75% 5%,100% 50%,75% 95%,25% 95%,0 50%)}.ic.t{border:0;font:700 19px/20px Georgia,serif;text-align:center}.ic.i{border:0;font:700 17px/20px system-ui;text-align:center}
+#fly,#fly2,#fly3{position:absolute;left:70px;top:70px;width:240px;background:var(--p);border:1px solid var(--b);border-radius:8px;padding:12px;z-index:5;box-shadow:0 8px 24px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:8px}
+#stage{flex:1;position:relative;overflow:hidden;background:var(--bg)}#zoom{position:absolute;left:12px;bottom:12px}
+#side{width:270px;background:var(--p);border-left:1px solid var(--b);overflow:auto;padding:12px;display:flex;flex-direction:column;gap:12px}
+h2{font-size:12px;margin:0 0 6px;color:var(--m);font-weight:600}section{border-top:1px solid var(--b);padding-top:10px}#side section:first-child{border:0;padding:0}
+label{display:flex;flex-direction:column;font-size:11px;color:var(--m);gap:2px}
+input,select,textarea,button{font:inherit;color:var(--t)}input,select{padding:5px 6px;border:1px solid var(--b);border-radius:4px;background:#fff;width:100%}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:6px}.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+button{padding:6px 8px;border:1px solid var(--b);border-radius:4px;background:#fff;cursor:pointer}button:hover{border-color:var(--a)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--a);outline-offset:1px}
+button.pri{background:var(--a);border-color:var(--ad);color:#fff;font-weight:600}button.dng{color:var(--er)}button:disabled{opacity:.45;cursor:not-allowed}
+.drawer{position:absolute;right:0;top:0;bottom:0;width:340px;background:var(--p);border-left:1px solid var(--b);box-shadow:-8px 0 24px rgba(0,0,0,.15);z-index:6;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+.modal{position:fixed;inset:0;background:rgba(20,28,38,.6);z-index:20;display:flex;align-items:center;justify-content:center}.mbox{background:var(--p);border-radius:8px;padding:14px;max-width:96vw;max-height:94vh;overflow:auto;min-width:min(920px,96vw)}.mh{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+[hidden]{display:none!important}
+#log{background:#fff;border:1px solid var(--b);border-radius:4px;height:130px;overflow:auto;font:11px/1.4 Consolas,monospace;padding:6px;white-space:pre-wrap}
+#gc{width:100%;height:120px;font:11px Consolas,monospace;border:1px solid var(--b);border-radius:4px;padding:6px;background:#fff}
+#pf div{padding:4px 8px;border-radius:4px;margin-top:4px}.pok{background:#e2f3e8}.pw{background:#fdf0cf}.pe{background:#f8dcd6}
+#rc{border:1px solid #8c7a55;border-radius:3px;display:block;max-width:100%}input[type=range]{padding:0}
+#st{font-weight:600}.hint{color:var(--m);font-size:11px}.pos{font:600 15px Consolas,monospace}
+#sim.pane{flex:0 0 44%;min-width:340px;background:var(--p);border-left:1px solid var(--b);overflow:auto;padding:10px}#sim .mbox{min-width:0;max-height:none;padding:0;overflow:visible;background:none}#stage{min-width:0}#rc,#r3{height:auto!important;width:100%}
+#layers{max-height:170px;overflow:auto}#layers .lr{display:flex;gap:6px;align-items:center;padding:4px 6px;border:1px solid var(--b);border-radius:4px;margin-bottom:3px;cursor:pointer}#layers .lr span:first-child{flex:1}#layers .lr.on{border-color:var(--a);background:#e8f2fd}#layers .lr button{padding:0 7px;color:var(--er)}
+#rail button.on{background:#e8f2fd;color:var(--a);border-color:var(--a)}.ic.ln{border:0;background:linear-gradient(135deg,transparent 44%,currentColor 44% 56%,transparent 56%)}.ic.dr{border:0;border-radius:50%;background:radial-gradient(circle,currentColor 0 28%,transparent 30% 58%,currentColor 60% 78%,transparent 80%)}
+#fly3{display:grid;grid-template-columns:repeat(3,1fr);width:270px}#fly3 button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 2px;font-size:11px;color:var(--m)}#fly3 button:hover{color:var(--a)}.ic.hc{height:11px;border-radius:20px 20px 0 0}.ic.tr{border:0;background:currentColor;clip-path:polygon(50% 6%,96% 92%,4% 92%)}.ic.sh{border:0;background:linear-gradient(currentColor,currentColor) 0 0/12px 12px no-repeat,radial-gradient(circle at 70% 70%,currentColor 0 5px,transparent 6px)}
+.ic.ms{border:0;background:linear-gradient(currentColor,currentColor) 0 100%/100% 3px no-repeat,repeating-linear-gradient(90deg,currentColor 0 2px,transparent 2px 5px) 0 30%/100% 55% no-repeat}
+#zoom{display:flex;gap:8px;align-items:center}#cur{background:#1d2733;color:#fff;padding:7px 11px;border-radius:5px;font:600 12px Consolas,monospace;min-width:200px}
+</style><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script></head>
+<body>
+<header id="top"><b class="logo">CNC Studio</b><input id="pname" value="Untitled project" aria-label="Project name"><span class="sp"></span><span class="hint2">GRBL 3018</span><button id="pnew" title="New project">New</button><button id="popen" title="Open project (Ctrl+O)">Open</button><button id="psave" title="Save project (Ctrl+S)">Save project</button><input id="pfile" type="file" accept=".cncproj,.json" hidden><span style="width:1px;height:22px;background:#47566a"></span><button id="gimp" title="Import G-code or drop a file on the window">Import G-code</button><button id="gsave" title="Save the G-code for this job">Save G-code</button><button id="undo" title="Undo (Ctrl+Z)">Undo</button><button id="redo" title="Redo (Ctrl+Y)">Redo</button><button id="bsim">Preview</button><button id="bcarve" class="bl">Carve</button></header>
+<div id="wrap">
+<nav id="rail"><button id="s-shapes" title="Shapes"><i class="ic sh"></i>Shapes</button><button id="s-line"><i class="ic ln"></i>Line</button><button id="s-drill"><i class="ic dr"></i>Drill</button><button id="s-measure"><i class="ic ms"></i>Measure</button><button id="s-text"><i class="ic t">T</i>Text</button><label class="rb" title="Import an SVG file"><i class="ic i">SVG</i>Import<input id="svg" type="file" accept=".svg" hidden></label></nav>
+<div id="fly3" hidden><button id="s-rect"><i class="ic"></i>Rectangle</button><button id="s-circ"><i class="ic c"></i>Circle</button><button id="s-half"><i class="ic hc"></i>Half circle</button><button id="s-tri"><svg class="ol" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="10,2.5 18,17 2,17"/></svg>Triangle</button><button id="s-poly"><svg class="ol" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="5.5,2.5 14.5,2.5 19,10 14.5,17.5 5.5,17.5 1,10"/></svg>Hexagon</button></div>
+<div id="fly2" hidden><label>Line style<select id="lstyle"><option value="s">Straight segments</option><option value="c">Smooth curve</option></select></label><label style="flex-direction:row;gap:6px;align-items:center"><input id="lclosed" type="checkbox" style="width:auto">Close the shape</label><button id="lfin" class="pri">Finish line</button></div>
+<div id="fly" hidden><label>Text<input id="t-text" value="Hello"></label><div class="g"><label>Font<select id="t-font"><option>Roboto</option><option>Lobster</option><option>Bebas Neue</option><option>Pacifico</option></select></label><label>Height (mm)<input id="t-size" type="number" value="25"></label></div><button id="t-add" class="pri">Add text</button></div>
+<div id="stage"><canvas id="cv"></canvas><div id="zoom"><button id="fit">Fit to screen</button><span id="cur">X –   Y –</span></div><div id="thint" hidden style="position:absolute;left:50%;top:10px;transform:translateX(-50%);background:#1d2733;color:#fff;padding:6px 14px;border-radius:14px;font-size:12px;white-space:nowrap"></div></div>
+<aside id="side">
+<section><h2>Workpiece</h2><div class="g"><label>Width (mm)<input id="sw" type="number" value="300"></label><label>Height (mm)<input id="sh" type="number" value="180"></label><label>Default cut depth<input id="depth" type="number" step=".1" value="2"></label><label>Safe Z (mm)<input id="safe" type="number" value="3"></label><label style="flex-direction:row;align-items:center;gap:6px;grid-column:span 2"><input id="snap" type="checkbox" style="width:auto" checked>Snap to 5 mm grid</label></div></section>
+<section><h2>Bit and feeds</h2><div class="g"><label>Bit diameter (mm)<input id="bit" type="number" step=".05" value="3.175"></label><label>Stepover (× bit)<input id="step" type="number" step=".05" value=".4"></label><label>Depth per pass<input id="dstep" type="number" step=".1" value=".5"></label><label>Spindle S<input id="rpm" type="number" value="1000"></label><label>Feed (mm/min)<input id="feed" type="number" value="400"></label><label>Plunge (mm/min)<input id="plunge" type="number" value="150"></label><label>Tabs per outline<input id="tn" type="number" min="0" value="0"></label><label>Tab width (mm)<input id="tw" type="number" value="6"></label><label>Tab height (mm)<input id="th" type="number" step=".1" value="1.5"></label><label>Drill peck (mm)<input id="pk" type="number" step=".1" value="1.5"></label></div></section>
+<section><h2>Combine (select two shapes)</h2><div class="g3"><button id="b-un">Union</button><button id="b-sub">Subtract</button><button id="b-int">Intersect</button></div><div class="hint" style="margin-top:4px">Shift+click to select two. Subtract cuts the upper shape out of the lower one.</div></section>
+<section><h2>Shapes</h2><div id="layers"></div><div class="g" style="margin-top:6px"><button id="del2" class="dng">Delete selected</button><button id="clr" class="dng">Delete all</button></div></section>
+<section id="props" hidden><h2>Shape: <span id="pn"></span></h2><label>Cut type<select id="op"></select></label><label style="margin-top:6px">Cut depth (mm)<input id="sd" type="number" step=".1"></label>
+<div class="g" style="margin-top:6px"><label>X<input id="px" type="number" step=".5"></label><label>Y<input id="py" type="number" step=".5"></label><label>Width<input id="pw" type="number" step=".5"></label><label>Height<input id="ph" type="number" step=".5"></label><label>Rotation (°)<input id="pa" type="number"></label></div>
+<div class="g" style="margin-top:8px"><button id="dup">Duplicate</button><button id="del" class="dng">Delete</button></div><button id="rst" style="width:100%;margin-top:6px">Reset size, rotation and cut settings</button><div class="hint" style="margin-top:6px">X and Y are the shape center from the lower-left corner. Alt+drag pans, wheel zooms.</div></section>
+</aside>
+<div id="drawer" class="drawer" hidden>
+<section style="border:0;padding:0"><h2>Machine</h2>
+<div class="g"><button id="con" class="pri">Connect</button><button id="unl">Unlock ($X)</button><button id="hom">Home ($H)</button><button id="zero">Set zero here</button></div>
+<div style="margin-top:8px">State: <span id="st">Disconnected</span></div><div class="pos" id="pos">X0.000 Y0.000 Z0.000</div></section>
+<section><h2>Jog</h2>
+<div class="g"><label>Step<select id="js"><option>0.1</option><option>1</option><option selected>10</option><option>50</option></select></label><label>Feed<input id="jf" type="number" value="1000"></label></div>
+<div class="g3" style="margin-top:6px"><button data-j="Y1">Y+</button><button data-j="Z1">Z+</button><span></span><button data-j="X-1">X−</button><button id="gz">Go to zero</button><button data-j="X1">X+</button><button data-j="Y-1">Y−</button><button data-j="Z-1">Z−</button><span></span></div></section>
+<section><h2>Test without cutting</h2>
+<button id="vmb" style="width:100%">Connect virtual machine</button>
+<label style="flex-direction:row;align-items:center;gap:6px;margin-top:8px"><input type="checkbox" id="air" style="width:auto">Air cut: spindle off, raised by</label>
+<div class="g" style="margin-top:4px"><input id="airz" type="number" value="5"><span class="hint">mm</span></div>
+<button id="pfb" style="width:100%;margin-top:8px">Pre-flight check</button>
+<div class="hint" style="margin-top:4px">The virtual machine acts like a GRBL 3018 running 20× faster than real time.</div></section>
+<section><h2>Run job</h2>
+<div class="g"><button id="run" class="pri">Start</button><button id="stop" class="dng">Stop and reset</button><button id="hold">Pause</button><button id="res">Resume</button></div>
+<div class="hint" id="prog" style="margin-top:6px">Idle</div></section>
+<section><h2>Console</h2><div id="log"></div>
+<div style="display:flex;gap:6px;margin-top:6px"><input id="cmd" placeholder="Send command, e.g. $$"><button id="snd">Send</button></div></section>
+<section><h2>G-code</h2><textarea id="gc" readonly placeholder="Generated G-code appears here"></textarea>
+<div class="g4"><button id="gen" class="pri">Generate G-code</button><button id="dl">Save .nc file</button><button id="ld">Load .nc file</button><span></span></div><input id="ncf" type="file" hidden accept=".nc,.gcode,.txt,.ngc,.tap,.gc"></section></div>
+</div>
+<div id="sim" class="pane"><div class="mbox"><div class="mh"><b>Live preview</b><span style="display:flex;gap:6px"><button id="gback" hidden>Back to my design</button><button id="sx">Hide</button></span></div><div id="vr"><canvas id="rc"></canvas><canvas id="r3" width="900" height="540" hidden style="max-width:100%;border-radius:3px"></canvas>
+<div class="g4" style="margin:8px 0;align-items:center"><button id="pl" class="pri">Play</button><select id="sp"><option value="1">1×</option><option value="4" selected>4×</option><option value="16">16×</option></select><label style="flex-direction:row;align-items:center;gap:4px"><input type="checkbox" id="ov" style="width:auto">Toolpath</label><button id="rb">Rebuild</button><button id="v3">3D view</button></div>
+<input type="range" id="sl" min="0" max="1000" value="1000"><div id="rs" class="hint" style="margin-top:4px"></div><div id="pf"></div></div></div></div>
+<div id="hid" style="position:absolute;left:-9999px;width:0;height:0"></div>
+<script src="https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/opentype.js@1.3.4/dist/opentype.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
+<script>
+const $=id=>document.getElementById(id),v=id=>parseFloat($(id).value),S=3,F=n=>n.toFixed(3);
+let shapes=[],sel=-1,ack=null,port,writer,running=false,stopF=false,drag=null,mpos=[0,0,0],wco=[0,0,0];
+const log=(t,k)=>{const l=$('log'),d=document.createElement('div');d.textContent=t;if(k)d.style.color=k;l.append(d);l.scrollTop=l.scrollHeight};
+/* ---------- design canvas (Fabric.js) + Clipper offsets + opentype text ---------- */
+if(typeof fabric=='undefined'||typeof ClipperLib=='undefined'){document.body.innerHTML='<p style="padding:24px">This version loads Fabric.js, Clipper and opentype.js from a CDN. Connect to the internet and reload.</p>';throw 0}
+const K=1000,CL=ClipperLib,fonts={Roboto:'roboto',Lobster:'lobster','Bebas Neue':'bebas-neue',Pacifico:'pacifico'},fcache={},var_er=()=>'#c4412f';
+const canvas=new fabric.Canvas('cv',{preserveObjectStacking:true,stopContextMenu:true});let N=0;
+const draw=()=>canvas.requestRenderAll(),WH=()=>[v('sw'),v('sh')],wpos=()=>mpos.map((m,i)=>m-wco[i]);
+function fit(){const b=$('stage'),[W,H]=WH();canvas.setDimensions({width:b.clientWidth,height:b.clientHeight});const z=Math.min(b.clientWidth/(W+60),b.clientHeight/(H+60));canvas.setViewportTransform([z,0,0,z,(b.clientWidth-W*z)/2,(b.clientHeight-H*z)/2]);draw()}
+canvas.on('before:render',()=>{const x=canvas.contextContainer,[W,H]=WH(),z=canvas.viewportTransform[0];if(!x)return;x.save();x.transform(...canvas.viewportTransform);
+ x.fillStyle='#d9b87a';x.shadowColor='rgba(0,0,0,.3)';x.shadowBlur=14;x.fillRect(0,0,W,H);x.shadowBlur=0;
+ x.strokeStyle='rgba(90,60,20,.16)';x.lineWidth=1/z;x.beginPath();for(let i=0;i<=W;i+=10){x.moveTo(i,0);x.lineTo(i,H)}for(let i=0;i<=H;i+=10){x.moveTo(0,i);x.lineTo(W,i)}x.stroke();
+ x.fillStyle='#4a5560';x.font=(10/z)+'px system-ui';for(let i=0;i<=W;i+=50)x.fillText(i,i+2/z,-5/z);for(let i=50;i<=H;i+=50)x.fillText(i,-24/z,H-i+3/z);
+ x.lineWidth=2.5/z;x.strokeStyle='#e0603a';x.beginPath();x.moveTo(0,H);x.lineTo(16,H);x.stroke();x.strokeStyle='#2e9e5b';x.beginPath();x.moveTo(0,H);x.lineTo(0,H-16);x.stroke();x.restore()});
+canvas.on('after:render',()=>{const x=canvas.contextContainer,[W,H]=WH(),p=wpos(),m=canvas.viewportTransform;x.save();x.transform(...m);x.fillStyle='#c4412f';x.beginPath();x.arc(p[0],H-p[1],4/m[0],0,7);x.fill();x.restore()});
+function style(o){const f=o.op=='pocket'&&o.closed;o.set({fill:o.op=='drill'?'rgba(224,96,58,.92)':o.closed?(f?'rgba(38,42,50,.85)':'rgba(255,255,255,.2)'):'',stroke:'#262a32',strokeWidth:f?0:1.5,strokeUniform:true})}
+function addShape(name,C,closed=true,at){const d=C.map(c=>'M'+c.map(p=>p[0].toFixed(3)+' '+p[1].toFixed(3)).join('L')+(closed?'Z':'')).join('');
+ const o=new fabric.Path(d,{fillRule:'evenodd',objectCaching:false,cornerStyle:'circle',cornerColor:'#fff',cornerStrokeColor:'#1e88e5',borderColor:'#1e88e5',cornerSize:10,transparentCorners:false});
+ Object.assign(o,{name:name+' '+(++N),__c:C,closed,op:closed?'outside':'online',depth:v('depth')});style(o);const[W,H]=WH();
+ o.set(at?{left:at[0],top:at[1]}:{left:(W-o.width)/2,top:(H-o.height)/2});o.setCoords();canvas.add(o).setActiveObject(o);sync();draw();return o}
+const ngon=(n,r)=>Array.from({length:n},(_,i)=>[r+r*Math.cos(i/n*6.2832),r+r*Math.sin(i/n*6.2832)]);
+$('s-rect').onclick=()=>addShape('Rectangle',[[[0,0],[60,0],[60,40],[0,40]]]);
+$('s-circ').onclick=()=>addShape('Circle',[ngon(72,25)]);$('s-poly').onclick=()=>addShape('Hexagon',[ngon(6,25)]);
+$('s-text').onclick=()=>{const was=$('fly').hidden;setTool(null);$('fly3').hidden=true;$('fly').hidden=!was};
+const font=n=>fcache[n]||(fcache[n]=(async()=>{const id=fonts[n],urls=['https://cdn.jsdelivr.net/npm/@fontsource/'+id+'@5.0.8/files/'+id+'-latin-400-normal.woff','https://cdn.jsdelivr.net/fontsource/fonts/'+id+'@latest/latin-400-normal.woff'];let err;
+ for(const u of urls){try{return await new Promise((ok,no)=>opentype.load(u,(e,f)=>e?no(e):ok(f)))}catch(e){err=e}}fcache[n]=null;throw err})());
+const toast=m=>{const h=$('thint');h.textContent=m;h.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>{h.hidden=!tool;h.textContent=''},5000)};
+$('t-add').onclick=async()=>{try{const f=await font($('t-font').value),pa=f.getPath($('t-text').value||'Text',0,0,+$('t-size').value||20),C=[];let cur,P;
+ pa.commands.forEach(c=>{if(c.type=='M'){cur=[[c.x,c.y]];C.push(cur)}else if(c.type=='L')cur.push([c.x,c.y]);
+  else if(c.type=='Q')for(let i=1;i<=8;i++){const t=i/8,u=1-t;cur.push([u*u*P[0]+2*u*t*c.x1+t*t*c.x,u*u*P[1]+2*u*t*c.y1+t*t*c.y])}
+  else if(c.type=='C')for(let i=1;i<=10;i++){const t=i/10,u=1-t;cur.push([u*u*u*P[0]+3*u*u*t*c.x1+3*u*t*t*c.x2+t*t*t*c.x,u*u*u*P[1]+3*u*u*t*c.y1+3*u*t*t*c.y2+t*t*t*c.y])}
+  if(c.x!==undefined)P=[c.x,c.y]});addShape('Text',C);$('fly').hidden=true}
+ catch(e){const m='Could not load the font. Text needs internet access the first time.';log(m+' '+e.message,var_er());toast(m)}};
+$('svg').onchange=async e=>{const f=e.target.files[0];if(!f)return;
+ const doc=new DOMParser().parseFromString(await f.text(),'image/svg+xml'),h=$('hid');h.innerHTML='';
+ const sv=document.createElementNS('http://www.w3.org/2000/svg','svg');h.append(sv);const els=[];
+ doc.querySelectorAll('path,rect,circle,ellipse,polygon,polyline').forEach(el=>{
+  if(el.tagName=='path')(el.getAttribute('d')||'').split(/(?=[Mm])/).filter(x=>x.trim()).forEach((d,i)=>{const p=document.createElementNS(sv.namespaceURI,'path');p.setAttribute('d',i?d.replace(/^m/,'M'):d);els.push([p,/[zZ]/.test(d)])});
+  else els.push([document.importNode(el,true),el.tagName!='polyline'])});
+ const raw=els.map(([el,cl])=>{sv.append(el);const L=el.getTotalLength(),n=Math.max(8,Math.ceil(L)),pts=[];
+  for(let i=0;i<=n;i++){const q=el.getPointAtLength(L*i/n);pts.push([q.x,q.y])}if(cl)pts.pop();return{pts,cl}}).filter(r=>r.pts.length>2);
+ if(!raw.length)return log('No usable shapes found in that SVG.',var_er());
+ let mx=1e9,my=1e9;raw.forEach(r=>r.pts.forEach(q=>{mx=Math.min(mx,q[0]);my=Math.min(my,q[1])}));const k=25.4/96,cv2=r=>r.pts.map(q=>[(q[0]-mx)*k,(q[1]-my)*k]);
+ const cl=raw.filter(r=>r.cl).map(cv2);if(cl.length)addShape('SVG',cl,true,[10,10]);raw.filter(r=>!r.cl).forEach(r=>addShape('SVG line',[cv2(r)],false,[10,10]));e.target.value=''};
+/* properties panel */
+function sync(){layers();const o=canvas.getActiveObject(),H=v('sh');if(!o||o.type=='activeSelection'){$('props').hidden=true;return}$('props').hidden=false;const c=o.getCenterPoint();
+ $('pn').textContent=o.name;$('px').value=c.x.toFixed(2);$('py').value=(H-c.y).toFixed(2);$('pw').value=o.getScaledWidth().toFixed(2);$('ph').value=o.getScaledHeight().toFixed(2);$('pa').value=Math.round(o.angle||0);
+ $('op').innerHTML=o.op=='drill'?'<option value="drill">Drill hole</option>':o.closed?'<option value="outside">Outline: outside</option><option value="inside">Outline: inside</option><option value="online">Outline: on the line</option><option value="pocket">Fill (pocket)</option>':'<option value="online">On the line</option>';$('op').value=o.op;$('sd').value=o.depth}
+canvas.on({'selection:created':sync,'selection:updated':sync,'selection:cleared':sync,'object:modified':sync,'object:moving':sync,'object:scaling':sync,'object:rotating':sync});
+['px','py','pw','ph','pa'].forEach(id=>$(id).oninput=()=>{const o=canvas.getActiveObject();if(!o||isNaN(v('px'))||isNaN(v('py')))return;
+ if(id=='pw'&&v('pw')>0)o.scaleX=v('pw')/o.width;if(id=='ph'&&v('ph')>0)o.scaleY=v('ph')/o.height;if(id=='pa')o.rotate(v('pa')||0);
+ o.setPositionByOrigin(new fabric.Point(v('px'),v('sh')-v('py')),'center','center');o.setCoords();draw()});
+$('op').onchange=()=>{const o=canvas.getActiveObject();if(o){o.op=$('op').value;style(o);draw();snap()}};
+$('sd').oninput=()=>{const o=canvas.getActiveObject();if(o)o.depth=Math.max(.1,v('sd')||.1)};$('sd').onchange=()=>snap();
+$('dup').onclick=()=>{const o=canvas.getActiveObject();if(o)o.clone(c=>{Object.assign(c,{name:o.name,__c:o.__c,closed:o.closed,op:o.op,depth:o.depth});c.set({left:o.left+5,top:o.top+5});canvas.add(c).setActiveObject(c);sync();draw()})};
+function layers(){const L=$('layers'),a=canvas.getActiveObjects();L.innerHTML='';
+ canvas.getObjects().slice().reverse().forEach(o=>{const d=document.createElement('div');d.className='lr'+(a.includes(o)?' on':'');d.innerHTML='<span></span><span class="hint"></span><button title="Delete this shape" aria-label="Delete this shape">✕</button>';
+  d.children[0].textContent=o.name;d.children[1].textContent=o.closed?o.op:'open';
+  d.onclick=e=>{if(e.target.tagName=='BUTTON'){canvas.discardActiveObject();canvas.remove(o)}else canvas.setActiveObject(o);sync();draw()};L.append(d)});
+ if(!L.children.length)L.innerHTML='<div class="hint">No shapes yet. Add one from the left toolbar.</div>';$('del2').disabled=!a.length;$('clr').disabled=!canvas.getObjects().length}
+const delSel=()=>{const a=canvas.getActiveObjects();canvas.discardActiveObject();a.forEach(o=>canvas.remove(o));sync();draw()};
+$('del').onclick=delSel;$('del2').onclick=delSel;
+$('clr').onclick=()=>{if(canvas.getObjects().length&&confirm('Delete all shapes?')){canvas.discardActiveObject();canvas.getObjects().slice().forEach(o=>canvas.remove(o));sync();draw()}};
+$('rst').onclick=()=>{const o=canvas.getActiveObject();if(!o)return;o.set({scaleX:1,scaleY:1,angle:0,op:o.op=='drill'?'drill':o.closed?'outside':'online',depth:v('depth')});style(o);o.setCoords();sync();draw();snap()};
+canvas.on({'object:added':layers,'object:removed':layers});
+addEventListener('keydown',e=>{if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()=='z'){e.preventDefault();$(e.shiftKey?'redo':'undo').click()}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()=='y')$('redo').click();if(e.key=='Delete'||e.key=='Backspace')$('del').click();if((e.ctrlKey||e.metaKey)&&e.key=='d'){e.preventDefault();$('dup').click()}});
+/* zoom and pan */
+canvas.on('mouse:wheel',o=>{const e=o.e;canvas.zoomToPoint({x:e.offsetX,y:e.offsetY},Math.min(20,Math.max(.3,canvas.getZoom()*.999**e.deltaY)));e.preventDefault();e.stopPropagation()});
+let pan=null;canvas.on('mouse:down',o=>{if(o.e.altKey||o.e.button==1){pan=[o.e.clientX,o.e.clientY];canvas.selection=false}});
+canvas.on('mouse:move',o=>{if(!pan)return;const m=canvas.viewportTransform;m[4]+=o.e.clientX-pan[0];m[5]+=o.e.clientY-pan[1];pan=[o.e.clientX,o.e.clientY];draw()});
+canvas.on('mouse:up',()=>{pan=null;canvas.selection=true});
+$('fit').onclick=fit;addEventListener('resize',fit);['sw','sh'].forEach(i=>$(i).onchange=fit);
+$('bcarve').onclick=()=>$('drawer').hidden=!$('drawer').hidden;
+/* toolpaths (Clipper) */
+function mpaths(o){const H=v('sh'),m=o.calcTransformMatrix(),po=o.pathOffset;return o.__c.map(c=>c.map(p=>{const q=fabric.util.transformPoint(new fabric.Point(p[0]-po.x,p[1]-po.y),m);return{X:Math.round(q.x*K),Y:Math.round((H-q.y)*K)}}))}
+function offs(P,d){const sp=CL.Clipper.SimplifyPolygons(P,CL.PolyFillType.pftEvenOdd),co=new CL.ClipperOffset(2,40),out=new CL.Paths();co.AddPaths(sp,CL.JoinType.jtRound,CL.EndType.etClosedPolygon);co.Execute(out,d*K);return out}
+const mm=P=>P.map(r=>r.map(q=>[q.X/K,q.Y/K]));
+function plan(){const r=v('bit')/2,st=Math.max(.1,v('step'))*v('bit');return canvas.getObjects().map(s=>{if(s.op=='drill'){const c=s.getCenterPoint();return{s,rings:[],drill:[c.x,v('sh')-c.y]}}const P=mpaths(s);let rings=[];
+ if(!s.closed||s.op=='online')rings=mm(P);else if(s.op=='outside')rings=mm(offs(P,r));else if(s.op=='inside')rings=mm(offs(P,-r));
+ else for(let d=-r,i=0;i<400;d-=st,i++){const q=offs(P,d);if(!q.length)break;rings.push(...mm(q))}
+ return{s,rings}})}
+function tabz(r,n,w){const P=[],fl=[],seg=r.map((a,i)=>{const b=r[(i+1)%r.length];return Math.hypot(b[0]-a[0],b[1]-a[1])}),L=seg.reduce((x,y)=>x+y,0)||1;let acc=0;
+ r.forEach((a,i)=>{const b=r[(i+1)%r.length],l=seg[i],m=Math.max(1,Math.ceil(l));for(let k=0;k<m;k++){const u=k/m,d=acc+l*u;P.push([a[0]+(b[0]-a[0])*u,a[1]+(b[1]-a[1])*u]);fl.push(((d/L)*n)%1*L/n<w)}acc+=l});return[P,fl]}
+function gcode(){const az=$('air').checked?v('airz'):0,dp=Math.max(.05,v('dstep')),sf=Math.max(v('safe'),az?az+3:0),f=v('feed'),pf=v('plunge'),n=Math.max(0,Math.round(v('tn')||0)),tw=v('tw')||6,th=v('th')||1.5;
+ const g=['(CNC Studio - GRBL 3018)','G21 G90 G17 G94',($('air').checked?'M5 (air cut: spindle off)':'M3 S'+v('rpm')),'G0 Z'+F(sf)],X=q=>' X'+F(q[0])+' Y'+F(q[1]);
+ plan().forEach(({s,rings,drill})=>{g.push('('+s.name+' / '+s.op+')');
+  if(drill){const pk=Math.max(.2,v('pk')||1.5);g.push('G0'+X(drill));let prev=0;for(let d=pk;;d+=pk){const z=Math.min(d,s.depth);if(prev)g.push('G0 Z'+F(-prev+.5+az));g.push('G1 Z'+F(-z+az)+' F'+pf,'G0 Z'+F(sf));prev=z;if(z>=s.depth)break}return}
+  if(!rings.length)return;const tabs=n>0&&s.closed&&s.op!='pocket'&&s.depth>th+.2;
+  for(let d=dp;;d+=dp){const z=Math.min(d,s.depth);
+   rings.forEach(r=>{if(r.length<2)return;
+    if(tabs&&z>s.depth-th){const[P,fl]=tabz(r,n,tw),zt=s.depth-th;let cz=fl[0]?zt:z;g.push('G0'+X(P[0]),'G1 Z'+F(-cz+az)+' F'+pf);
+     P.slice(1).concat([P[0]]).forEach((q,i)=>{const zz=fl[(i+1)%P.length]?zt:z;if(zz!=cz){g.push('G1 Z'+F(-zz+az)+' F'+pf);cz=zz}g.push('G1'+X(q)+' F'+f)})}
+    else{g.push('G0'+X(r[0]),'G1 Z'+F(-z+az)+' F'+pf);r.slice(1).forEach(q=>g.push('G1'+X(q)+' F'+f));if(s.closed)g.push('G1'+X(r[0]))}
+    g.push('G0 Z'+F(sf))});
+   if(z>=s.depth)break}});
+ g.push('M5','G0 Z'+F(sf),'G0 X0 Y0','M2');return g}
+/* ---------- G-code file ---------- */
+$('gen').onclick=()=>{custom=false;$('gback').hidden=true;$('gc').value=gcode().join('\n')};
+/* import and save G-code */
+let gname='';
+function loadG(f){f.text().then(t=>{if(!/G0?[0-3]\b|M0?[35]\b/i.test(t))return toast('That file does not look like G-code.');
+ $('gc').value=t;custom=true;gname=f.name;tab(true);toast('Imported '+f.name+'. Shown in the preview and as a purple overlay on the design.')})}
+$('gimp').onclick=()=>$('ncf').click();$('ld').onclick=()=>$('ncf').click();
+$('ncf').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)loadG(f)};
+$('gback').onclick=()=>{custom=false;gname='';$('gback').hidden=true;build();draw()};
+function dlG(t,nm){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/plain'}));a.download=nm;a.click();toast('Saved '+nm+' to your downloads folder')}
+async function saveG(){const t=custom?$('gc').value:gcode().join('\n');
+ if(!t.trim()||(!custom&&!canvas.getObjects().length))return toast('Nothing to save yet. Add a shape first.');if(!custom)$('gc').value=t;
+ const nm=custom&&gname?gname:(($('pname').value||'job').trim().replace(/[^\w\-]+/g,'_')||'job')+'.nc';
+ try{if(window.showSaveFilePicker){const h=await showSaveFilePicker({suggestedName:nm,types:[{description:'G-code',accept:{'text/plain':['.nc','.gcode','.ngc','.tap']}}]});const w=await h.createWritable();await w.write(t);await w.close();toast('Saved '+h.name)}else dlG(t,nm)}
+ catch(e){if(e.name!='AbortError')dlG(t,nm)}}
+$('gsave').onclick=saveG;$('dl').onclick=saveG;
+addEventListener('keydown',e=>{if(!(e.ctrlKey||e.metaKey))return;const k=e.key.toLowerCase();if(k=='s'){e.preventDefault();saveProject()}if(k=='o'){e.preventDefault();$('pfile').click()}});
+addEventListener('dragover',e=>e.preventDefault());
+addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f&&/\.(cncproj|json)$/i.test(f.name))openProject(f);else if(f&&/\.(nc|gcode|ngc|tap|gc|txt)$/i.test(f.name))loadG(f)});
+canvas.on('after:render',()=>{if(!custom||!segs.length)return;const x=canvas.contextContainer,m=canvas.viewportTransform,H=v('sh');x.save();x.transform(...m);x.strokeStyle='#7b4fd0';x.lineWidth=1.6/m[0];x.beginPath();
+ segs.forEach(q=>{if(q.a[2]<0||q.b[2]<0){x.moveTo(q.a[0],H-q.a[1]);x.lineTo(q.b[0],H-q.b[1])}});x.stroke();x.restore()});
+/* ---------- GRBL serial ---------- */
+const send=s=>writer&&writer.write(new TextEncoder().encode(s));
+const line=s=>new Promise(r=>{ack=r;send(s+'\n')});
+function rx(l){
+ if(l[0]=='<'){const m=l.match(/^<([^|>]+)\|MPos:([^,]+),([^,]+),([^|>]+)/),w=l.match(/WCO:([^,]+),([^,]+),([^|>]+)/);
+  if(w)wco=[+w[1],+w[2],+w[3]];if(m){mpos=[+m[2],+m[3],+m[4]];$('st').textContent=m[1];const p=wpos();$('pos').textContent='X'+F(p[0])+' Y'+F(p[1])+' Z'+F(p[2]);draw()}return}
+ if(l=='ok'){ack&&ack();ack=null;return}
+ if(/^error|^ALARM/i.test(l)){log(l,var_er());if(running)stopF=true;ack&&ack();ack=null;return}
+ log(l)}
+async function readLoop(){const d=new TextDecoderStream();port.readable.pipeTo(d.writable);const r=d.readable.getReader();let b='';
+ for(;;){const{value,done}=await r.read();if(done)break;b+=value;let i;while((i=b.indexOf('\n'))>=0){const l=b.slice(0,i).trim();b=b.slice(i+1);if(l)rx(l)}}}
+$('con').onclick=async()=>{
+ if(!('serial'in navigator))return log('Web Serial is not available. Open this file in Chrome or Edge.',var_er());
+ try{port=await navigator.serial.requestPort();await port.open({baudRate:115200});writer=port.writable.getWriter();readLoop();
+  setInterval(()=>send('?'),250);$('con').textContent='Connected';$('con').disabled=true;log('Connected at 115200 baud.');setTimeout(()=>send('$X\n'),1500)}
+ catch(e){log('Connection failed: '+e.message,var_er())}};
+const cmd=s=>{if(!writer)return log('Connect to the machine first.',var_er());if(running&&!/^[!~]/.test(s))return log('A job is running.',var_er());send(s+'\n');log('> '+s,'#6d7480')};
+$('unl').onclick=()=>cmd('$X');$('hom').onclick=()=>cmd('$H');$('zero').onclick=()=>cmd('G10 L20 P1 X0 Y0 Z0');
+$('gz').onclick=()=>cmd('G90 G0 X0 Y0');
+$('snd').onclick=()=>{if($('cmd').value){cmd($('cmd').value);$('cmd').value=''}};$('cmd').onkeydown=e=>{if(e.key=='Enter')$('snd').click()};
+document.querySelectorAll('[data-j]').forEach(b=>b.onclick=()=>{const a=b.dataset.j[0],s=+b.dataset.j.slice(1);cmd('$J=G91 G21 '+a+(s*v('js'))+' F'+v('jf'))});
+$('hold').onclick=()=>writer&&send('!');$('res').onclick=()=>writer&&send('~');
+$('stop').onclick=()=>{stopF=true;if(writer){send('!');setTimeout(()=>{send('\x18');ack&&ack();ack=null},150)}$('prog').textContent='Stopped'};
+$('run').onclick=async()=>{if(!writer)return log('Connect to the machine first.',var_er());if(!canvas.getObjects().length&&!$('gc').value.trim())return log('Add a shape or load a file first.',var_er());
+ if(!custom)$('gc').value=gcode().join('\n');
+ const pr=preflight(parseG($('gc').value),$('gc').value);if(pr.err){tab(true);return log('Pre-flight check failed. See the Render tab.',var_er())}
+ if(!vmOn&&!confirm('Check that the stock is clamped, X/Y/Z zero are set and the spindle is clear. Start the job?'))return;
+ const L=$('gc').value.split('\n').map(s=>s.trim()).filter(Boolean);running=true;stopF=false;
+ for(let i=0;i<L.length&&!stopF;i++){$('prog').textContent='Line '+(i+1)+' of '+L.length;await line(L[i])}
+ running=false;$('prog').textContent=stopF?'Stopped':'Job finished';log(stopF?'Job stopped.':'Job finished.',stopF?var_er():'#2f8f5b')};
+
+/* ---------- test tools: parser, simulator, render, pre-flight, virtual GRBL ---------- */
+let custom=false,vmOn=false,segs=[],tot=0,tpos=1,playing=false,lastT=0,hm,nx,ny;const R=.5;
+const sl3=(a,b)=>Math.hypot(b[0]-a[0],b[1]-a[1],b[2]-a[2]);
+function parseG(t){const out=[];let p=[0,0,0],g=0,f=0,rel=false;
+ t.split('\n').forEach((raw,i)=>{const l=raw.replace(/\(.*?\)|;.*/g,'').toUpperCase(),w={},gs=[],re=/([A-Z])\s*(-?\d*\.?\d+)/g;let m;
+  while(m=re.exec(l)){if(m[1]=='G')gs.push(+m[2]);else w[m[1]]=+m[2]}
+  if(gs.includes(10)||gs.includes(92))return;
+  gs.forEach(x=>{if(x==0||x==1)g=x;if(x==90)rel=false;if(x==91)rel=true});
+  if(w.F)f=w.F;const q=p.slice();['X','Y','Z'].forEach((a,k)=>{if(w[a]!==undefined)q[k]=rel?p[k]+w[a]:w[a]});
+  if(q.some((x,k)=>x!=p[k])){out.push({a:p,b:q,g,f,ln:i+1});p=q}});return out}
+const est=sg=>sg.reduce((a,s)=>a+sl3(s.a,s.b)/((s.g?s.f||1:1500)/60),0),mss=t=>Math.floor(t/60)+':'+String(Math.round(t%60)).padStart(2,'0');
+function preflight(sg,t){const it=[],W=v('sw'),H=v('sh');let e=0,mz=0,out=false,nf=false,fast=false;const P=(k,m)=>{it.push([k,m]);if(k=='e')e=1};
+ sg.forEach(s=>{[s.a,s.b].forEach(q=>{if(q[0]<-.01||q[1]<-.01||q[0]>W+.01||q[1]>H+.01)out=true;mz=Math.min(mz,q[2])});if(s.g==1&&!s.f)nf=true;if(s.g==1&&s.f>1500)fast=true});
+ if(!sg.length)P('e','No moves found. Add a shape or load G-code.');
+ if(out)P('e','Some moves go outside the '+W+' × '+H+' mm stock area.');
+ if(mz<-40)P('e','Deepest cut is '+F(-mz)+' mm, more than a 3018 can plunge.');else if(mz<-10)P('w','Deepest cut is '+F(-mz)+' mm. Check the bit length.');
+ if(nf)P('e','A cutting move has no feed rate (F).');
+ if(fast)P('w','Feed above 1500 mm/min is aggressive for a 3018.');
+ if(!/M0?3(?!\d)/.test(t))P('w','No spindle start (M3) in the job. Fine for an air cut.');
+ if(!custom)plan().forEach(({s,rings,drill})=>{if(!rings.length&&!drill)P('w',s.name+' is too small for a '+v('bit')+' mm bit and will be skipped.')});
+ if(v('dstep')>v('bit'))P('w','Depth per pass is larger than the bit diameter.');
+ if(!e)P('ok','No blocking problems. Estimated run time '+mss(est(sg))+'.');
+ return{it,err:e}}
+function showPF(r){$('pf').innerHTML=r.it.map(([k,m])=>'<div class="p'+k+'">'+m+'</div>').join('')}
+function reset(){nx=Math.ceil(v('sw')/R);ny=Math.ceil(v('sh')/R);hm=new Float32Array(nx*ny)}
+function stamp(x,y,z){if(z>=0)return;const r=v('bit')/2,r2=r*r,x0=Math.max(0,Math.floor((x-r)/R)),x1=Math.min(nx-1,Math.ceil((x+r)/R)),y0=Math.max(0,Math.floor((y-r)/R)),y1=Math.min(ny-1,Math.ceil((y+r)/R));
+ for(let iy=y0;iy<=y1;iy++)for(let ix=x0;ix<=x1;ix++){const dx=ix*R+R/2-x,dy=iy*R+R/2-y;if(dx*dx+dy*dy<=r2&&z<hm[iy*nx+ix])hm[iy*nx+ix]=z}}
+function cut(s,t){const a=s.a,b=s.b;if(a[2]>=0&&b[2]>=0)return;const n=Math.max(1,Math.ceil(sl3(a,b)*t/(R/2)));for(let i=0;i<=n;i++){const u=t*i/n;stamp(a[0]+(b[0]-a[0])*u,a[1]+(b[1]-a[1])*u,a[2]+(b[2]-a[2])*u)}}
+function simTo(d){reset();let acc=0;for(const s of segs){const L=sl3(s.a,s.b);if(acc+L<=d){cut(s,1);acc+=L}else{const t=L?(d-acc)/L:0;cut(s,t);return s.a.map((x,k)=>x+(s.b[k]-x)*t)}}return segs.length?segs[segs.length-1].b:[0,0,0]}
+const rcv=$('rc'),rg=rcv.getContext('2d'),oc=document.createElement('canvas');
+function render(){const W=v('sw'),H=v('sh'),pos=simTo(tpos*tot);oc.width=nx;oc.height=ny;const o=oc.getContext('2d'),im=o.createImageData(nx,ny),d=im.data,g=(ix,iy)=>hm[Math.min(ny-1,Math.max(0,iy))*nx+Math.min(nx-1,Math.max(0,ix))];
+ for(let iy=0;iy<ny;iy++)for(let ix=0;ix<nx;ix++){const h=g(ix,iy),sh=Math.min(1.35,Math.max(.45,1+((g(ix+1,iy)-g(ix-1,iy))-(g(ix,iy+1)-g(ix,iy-1)))*.35)),dk=1-Math.min(.4,-h*.09),q=((ny-1-iy)*nx+ix)*4;
+  d[q]=Math.min(255,222*dk*sh);d[q+1]=Math.min(255,188*dk*sh);d[q+2]=Math.min(255,126*dk*sh);d[q+3]=255}
+ o.putImageData(im,0,0);rcv.width=W*S;rcv.height=H*S;rg.imageSmoothingEnabled=true;rg.drawImage(oc,0,0,rcv.width,rcv.height);
+ if($('ov').checked){rg.strokeStyle='rgba(28,93,153,.7)';rg.lineWidth=1;rg.beginPath();segs.forEach(s=>{if(s.a[2]<0||s.b[2]<0){rg.moveTo(s.a[0]*S,(H-s.a[1])*S);rg.lineTo(s.b[0]*S,(H-s.b[1])*S)}});rg.stroke()}
+ rg.strokeStyle='#c4412f';rg.lineWidth=2;rg.beginPath();rg.arc(pos[0]*S,(H-pos[1])*S,Math.max(3,v('bit')/2*S),0,7);rg.stroke();
+ let mn=0;for(let i=0;i<hm.length;i++)if(hm[i]<mn)mn=hm[i];
+ u3(pos);$('rs').textContent=segs.length+' moves · est. time '+mss(est(segs))+' · tool at X'+F(pos[0])+' Y'+F(pos[1])+' Z'+F(pos[2])+' · deepest cut so far '+F(-mn)+' mm'}
+function build(){const t=custom?$('gc').value:gcode().join('\n');if(!custom)$('gc').value=t;segs=parseG(t);tot=segs.reduce((a,s)=>a+sl3(s.a,s.b),0);tpos=1;$('sl').value=1000;playing=false;$('pl').textContent='Play';reset();showPF(preflight(segs,t));render()}
+function tab(r){$('sim').hidden=!r;if(r)build();$('gback').hidden=!custom;setTimeout(fit,0)}
+$('sx').onclick=()=>tab(false);$('bsim').onclick=()=>tab($('sim').hidden);$('rb').onclick=build;$('pfb').onclick=()=>tab(true);$('ov').onchange=render;
+$('sl').oninput=()=>{tpos=$('sl').value/1000;playing=false;$('pl').textContent='Play';render()};
+$('pl').onclick=()=>{if(playing){playing=false;$('pl').textContent='Play';return}if(tpos>=1)tpos=0;playing=true;$('pl').textContent='Pause';lastT=performance.now();requestAnimationFrame(tick)};
+function tick(n){if(!playing)return;tpos=Math.min(1,tpos+(n-lastT)/1000*$('sp').value/20);lastT=n;$('sl').value=tpos*1000;render();if(tpos>=1){playing=false;$('pl').textContent='Play'}else requestAnimationFrame(tick)}
+/* virtual GRBL machine */
+const vm={p:[0,0,0],w:[0,0,0],buf:'',hold:false,busy:false,q:[],g:0,f:500,t:0};
+function vmIn(s){for(const ch of s){if(ch=='?')rx('<'+(vm.hold?'Hold:0':vm.busy?'Run':'Idle')+'|MPos:'+vm.p.map(F).join(',')+'|FS:0,0|WCO:'+vm.w.map(F).join(',')+'>');
+ else if(ch=='!')vm.hold=true;else if(ch=='~')vm.hold=false;
+ else if(ch=='\x18'){vm.q=[];vm.hold=false;vm.busy=false;clearTimeout(vm.t);rx('Grbl 1.1h [\'$\' for help] (virtual machine)')}
+ else if(ch=='\n'){vm.q.push(vm.buf);vm.buf='';vmNext()}else vm.buf+=ch}}
+const vmDone=()=>setTimeout(()=>{rx('ok');vmNext()},0);
+function vmNext(){if(vm.busy||!vm.q.length)return;let l=vm.q.shift().replace(/\(.*?\)|;.*/g,'').trim().toUpperCase();const jog=l.startsWith('$J=');if(jog)l=l.slice(3);
+ const w={},gs=[],re=/([A-Z])\s*(-?\d*\.?\d+)/g;let m;while(m=re.exec(l)){if(m[1]=='G')gs.push(+m[2]);else w[m[1]]=+m[2]}
+ if(l=='$H'){vm.p=[0,0,0];vm.w=[0,0,0];return vmDone()}
+ if(gs.includes(10)){['X','Y','Z'].forEach((a,k)=>{if(w[a]!==undefined)vm.w[k]=vm.p[k]-w[a]});return vmDone()}
+ let rel=jog?gs.includes(91):vm.rel||false;gs.forEach(x=>{if(x==0||x==1)vm.g=x;if(x==90&&!jog)vm.rel=rel=false;if(x==91&&!jog)vm.rel=rel=true});
+ if(w.F)vm.f=w.F;const t=vm.p.slice();let mv=false;['X','Y','Z'].forEach((a,k)=>{if(w[a]!==undefined){mv=true;t[k]=rel?vm.p[k]+w[a]:w[a]+vm.w[k]}});
+ if(!mv)return vmDone();
+ const a=vm.p.slice(),dist=sl3(a,t),sp=((jog||vm.g==1)?vm.f:1500)/60*20,dur=dist/sp*1000;let el=0;vm.busy=true;
+ const step=()=>{if(!vm.hold)el+=30;const u=dur?Math.min(1,el/dur):1;vm.p=a.map((x,k)=>x+(t[k]-x)*u);if(u>=1){vm.busy=false;rx('ok');vmNext()}else vm.t=setTimeout(step,30)};step()}
+$('vmb').onclick=()=>{if(writer)return;vmOn=true;writer={write:u=>vmIn(new TextDecoder().decode(u))};setInterval(()=>send('?'),250);$('con').disabled=true;$('vmb').disabled=true;$('vmb').textContent='Virtual machine connected';log('Virtual GRBL machine connected. Jog, zero and run jobs as normal.','#1c5d99')};
+/* ---------- undo, snapping, boolean tools ---------- */
+const U=[],Rr=[];let lock=false;
+const pack=()=>JSON.stringify(canvas.getObjects().map(o=>({n:o.name,c:o.__c,cl:o.closed,op:o.op,d:o.depth,l:o.left,t:o.top,sx:o.scaleX,sy:o.scaleY,a:o.angle})));
+function snap(){if(lock)return;const p=pack();if(U[U.length-1]!==p){U.push(p);Rr.length=0;if(U.length>80)U.shift()}}
+function restore(p){lock=true;canvas.getObjects().slice().forEach(o=>canvas.remove(o));canvas.discardActiveObject();
+ JSON.parse(p).forEach(r=>{const o=addShape(r.n,r.c,r.cl,[r.l,r.t]);o.set({name:r.n,op:r.op,depth:r.d,scaleX:r.sx,scaleY:r.sy,angle:r.a,left:r.l,top:r.t});style(o);if(r.op=='drill')lockDrill(o);o.setCoords()});canvas.discardActiveObject();lock=false;sync();draw()}
+$('undo').onclick=()=>{if(U.length>1){Rr.push(U.pop());restore(U[U.length-1])}};$('redo').onclick=()=>{if(Rr.length){const p=Rr.pop();U.push(p);restore(p)}};
+canvas.on({'object:modified':snap,'object:added':snap,'object:removed':snap});
+canvas.on('object:moving',e=>{if($('snap').checked){e.target.left=Math.round(e.target.left/5)*5;e.target.top=Math.round(e.target.top/5)*5}});
+function bool(t){const a=canvas.getActiveObjects();if(a.length!=2)return log('Select exactly two shapes first (Shift+click).',var_er());
+ const[A,B]=canvas.getObjects().filter(o=>a.includes(o)),c=new CL.Clipper(),out=new CL.Paths(),PA=mpaths(A),PB=mpaths(B);
+ c.AddPaths(PA,CL.PolyType.ptSubject,true);c.AddPaths(PB,CL.PolyType.ptClip,true);c.Execute(t,out,CL.PolyFillType.pftEvenOdd,CL.PolyFillType.pftEvenOdd);
+ if(!out.length)return log('The result is empty.',var_er());const H=v('sh'),C=out.map(r=>r.map(q=>[q.X/K,H-q.Y/K]));let mx=1e9,my=1e9;C.forEach(r=>r.forEach(p=>{mx=Math.min(mx,p[0]);my=Math.min(my,p[1])}));
+ canvas.discardActiveObject();canvas.remove(A);canvas.remove(B);addShape('Combined',C,true,[mx,my])}
+$('b-un').onclick=()=>bool(CL.ClipType.ctUnion);$('b-sub').onclick=()=>bool(CL.ClipType.ctDifference);$('b-int').onclick=()=>bool(CL.ClipType.ctIntersection);
+/* ---------- 3D simulate view (three.js) ---------- */
+let T3=null,mode3=false;
+async function init3(){const T=await import('three'),{OrbitControls}=await import('three/addons/controls/OrbitControls.js'),W=v('sw'),H=v('sh');
+ const r=new T.WebGLRenderer({canvas:$('r3'),antialias:true});r.setSize(900,540,false);const sc=new T.Scene();sc.background=new T.Color(0xe4e7eb);
+ const cam=new T.PerspectiveCamera(40,900/540,1,4000);cam.up.set(0,0,1);cam.position.set(0,-H*1.1-120,W*.55);
+ const ctl=new OrbitControls(cam,$('r3'));ctl.addEventListener('change',()=>r.render(sc,cam));
+ sc.add(new T.AmbientLight(0xffffff,.6));const dl=new T.DirectionalLight(0xffffff,1.1);dl.position.set(-200,-250,400);sc.add(dl);
+ const geo=new T.PlaneGeometry(W,H,nx-1,ny-1);geo.setAttribute('color',new T.BufferAttribute(new Float32Array(nx*ny*3),3));
+ sc.add(new T.Mesh(geo,new T.MeshStandardMaterial({vertexColors:true,roughness:.85})));
+ const tool=new T.Mesh(new T.CylinderGeometry(v('bit')/2,v('bit')/2,25,16),new T.MeshStandardMaterial({color:0xb0b7c0,metalness:.8,roughness:.3}));tool.rotation.x=Math.PI/2;sc.add(tool);
+ T3={r,sc,cam,geo,tool,nx,ny,W,H}}
+function u3(pos){if(!mode3||!T3||T3.nx!=nx||T3.ny!=ny)return;const{geo,r,sc,cam,tool}=T3,p=geo.attributes.position,c=geo.attributes.color;
+ for(let row=0;row<ny;row++)for(let col=0;col<nx;col++){const h=hm[(ny-1-row)*nx+col],j=row*nx+col,k=1-Math.min(.45,-h*.1);p.setZ(j,h*4);c.setXYZ(j,.87*k,.74*k,.49*k)}
+ p.needsUpdate=c.needsUpdate=true;geo.computeVertexNormals();tool.position.set(pos[0]-T3.W/2,pos[1]-T3.H/2,pos[2]*4+12.5);r.render(sc,cam)}
+$('v3').onclick=async()=>{mode3=!mode3;$('rc').hidden=mode3;$('r3').hidden=!mode3;$('v3').textContent=mode3?'Top view':'3D view';
+ if(mode3){try{if(T3&&(T3.nx!=nx||T3.ny!=ny))T3=null;if(!T3)await init3();render()}catch(e){mode3=false;$('rc').hidden=false;$('r3').hidden=true;$('v3').textContent='3D view';log('3D view needs internet to load three.js: '+e.message,var_er())}}};
+/* ---------- line tool (straight and curved) and drill tool ---------- */
+let tool=null,pts=[],hov=null,ms=[],mp=null,mh=null;
+const lockDrill=o=>o.set({lockScalingX:true,lockScalingY:true,lockRotation:true,hasControls:false});
+function spline(P,closed){const n=P.length,out=[],g=i=>P[closed?(i%n+n)%n:Math.min(n-1,Math.max(0,i))];
+ for(let i=0;i<(closed?n:n-1);i++){const a=g(i-1),b=g(i),c=g(i+1),d=g(i+2);for(let k=0;k<12;k++){const t=k/12,t2=t*t,t3=t2*t;out.push([0,1].map(j=>.5*(2*b[j]+(-a[j]+c[j])*t+(2*a[j]-5*b[j]+4*c[j]-d[j])*t2+(-a[j]+3*b[j]-3*c[j]+d[j])*t3)))}}
+ if(!closed)out.push(P[n-1].slice());return out}
+function setTool(t){tool=t;pts=[];hov=null;$('fly').hidden=true;$('fly2').hidden=t!='line';$('fly3').hidden=true;canvas.skipTargetFind=!!t;canvas.defaultCursor=t?'crosshair':'default';canvas.selection=!t;if(t)canvas.discardActiveObject();
+ if(t!='measure'){ms=[];mp=null;mh=null}['line','drill','measure'].forEach(k=>$('s-'+k).classList.toggle('on',k==t));const h=$('thint');h.hidden=!t;h.textContent=t=='measure'?'Click two points to measure · snaps to shape points and corners · Esc clears':t=='line'?'Click to add points · double-click or Enter to finish · Esc to cancel':t=='drill'?'Click to place drill holes · Esc to stop':'';sync();draw()}
+['s-rect','s-circ','s-poly'].forEach(i=>$(i).addEventListener('click',()=>setTool(null)));
+$('s-line').onclick=()=>setTool(tool=='line'?null:'line');$('s-drill').onclick=()=>setTool(tool=='drill'?null:'drill');
+const tp=e=>{const q=canvas.getPointer(e);return $('snap').checked?[Math.round(q.x),Math.round(q.y)]:[q.x,q.y]};
+function addDrill(p){const r=v('bit')/2,o=addShape('Drill',[ngon(24,r)],true,[p[0]-r,p[1]-r]);o.op='drill';lockDrill(o);style(o);sync();draw();snap()}
+function finishLine(){if(tool!='line')return;const cl=$('lclosed').checked,min=cl?3:2;
+ if(pts.length<min){const n=pts.length;pts=[];hov=null;draw();if(n)log('A line needs at least '+min+' points.',var_er());return}
+ const C=$('lstyle').value=='c'&&pts.length>2?spline(pts,cl):pts.map(p=>p.slice());let mx=1e9,my=1e9;C.forEach(p=>{mx=Math.min(mx,p[0]);my=Math.min(my,p[1])});
+ pts=[];hov=null;addShape('Line',[C],cl,[mx,my])}
+canvas.on('mouse:down',o=>{if(!tool||o.e.altKey||o.e.button==1||o.e.detail>1)return;const p=tp(o.e);if(tool=='drill')addDrill(p);else{pts.push(p);draw()}});
+canvas.on('mouse:dblclick',()=>finishLine());
+canvas.on('mouse:move',o=>{if(tool=='line'&&pts.length){hov=tp(o.e);draw()}});
+canvas.on('after:render',()=>{if(tool!='line'||!pts.length)return;const x=canvas.contextContainer,m=canvas.viewportTransform,z=m[0],P=hov?pts.concat([hov]):pts,Q=$('lstyle').value=='c'&&P.length>2?spline(P,false):P;
+ x.save();x.transform(...m);x.strokeStyle='#1e88e5';x.lineWidth=2/z;x.beginPath();Q.forEach((q,i)=>x[i?'lineTo':'moveTo'](q[0],q[1]));x.stroke();x.fillStyle='#fff';pts.forEach(q=>{x.beginPath();x.arc(q[0],q[1],4/z,0,7);x.fill();x.stroke()});x.restore()});
+$('lfin').onclick=finishLine;
+addEventListener('keydown',e=>{if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;if(e.key=='Enter')finishLine();if(e.key=='Escape'){if(pts.length){pts=[];hov=null;draw()}else if(mp){mp=null;mh=null;draw()}else if(ms.length){ms=[];draw()}else if(tool)setTool(null)}});
+$('s-half').onclick=()=>addShape('Half circle',[Array.from({length:37},(_,i)=>[25+25*Math.cos(Math.PI*i/36),25-25*Math.sin(Math.PI*i/36)])]);
+$('s-tri').onclick=()=>addShape('Triangle',[[[25,0],[50,43.3],[0,43.3]]]);
+$('s-shapes').onclick=()=>{const was=$('fly3').hidden;setTool(null);$('fly').hidden=true;$('fly3').hidden=!was};
+['s-rect','s-circ','s-poly','s-half','s-tri'].forEach(i=>$(i).addEventListener('click',()=>{$('fly3').hidden=true;setTool(null)}));
+/* ---------- measure tool ---------- */
+$('s-measure').onclick=()=>setTool(tool=='measure'?null:'measure');
+function mpt(e){const q=canvas.getPointer(e),tol=10/canvas.viewportTransform[0],[W,H]=WH(),C=[[0,0],[W,0],[0,H],[W,H]];
+ canvas.getObjects().forEach(o=>{const m=o.calcTransformMatrix(),po=o.pathOffset;o.__c.forEach(c=>c.forEach(p=>{const r=fabric.util.transformPoint(new fabric.Point(p[0]-po.x,p[1]-po.y),m);C.push([r.x,r.y])}));const c=o.getCenterPoint();C.push([c.x,c.y])});
+ let best=null,bd=tol;C.forEach(p=>{const d=Math.hypot(p[0]-q.x,p[1]-q.y);if(d<bd){bd=d;best=p}});return best||[q.x,q.y]}
+canvas.on('mouse:down',o=>{if(tool!='measure'||o.e.altKey||o.e.button==1)return;const r=mpt(o.e);if(!mp){mp=r;mh=r}else{ms.push([mp,r]);mp=null;mh=null}draw()});
+canvas.on('mouse:move',o=>{if(tool=='measure'&&mp){mh=mpt(o.e);draw()}});
+canvas.on('after:render',()=>{const L=ms.slice();if(tool=='measure'&&mp&&mh)L.push([mp,mh]);if(!L.length)return;const x=canvas.contextContainer,m=canvas.viewportTransform,z=m[0];
+ x.save();x.transform(...m);L.forEach(([a,b])=>{const dx=b[0]-a[0],dy=-(b[1]-a[1]),d=Math.hypot(dx,dy),ang=Math.atan2(dy,dx)*180/Math.PI;
+  x.strokeStyle='#e0603a';x.lineWidth=1.8/z;x.beginPath();x.moveTo(a[0],a[1]);x.lineTo(b[0],b[1]);x.stroke();
+  x.setLineDash([4/z,4/z]);x.lineWidth=1/z;x.beginPath();x.moveTo(a[0],a[1]);x.lineTo(b[0],a[1]);x.lineTo(b[0],b[1]);x.stroke();x.setLineDash([]);
+  x.fillStyle='#fff';x.lineWidth=1.8/z;[a,b].forEach(p=>{x.beginPath();x.arc(p[0],p[1],4/z,0,7);x.fill();x.stroke()});
+  const t=d.toFixed(2)+' mm   ΔX '+Math.abs(dx).toFixed(2)+'   ΔY '+Math.abs(dy).toFixed(2)+'   '+ang.toFixed(1)+'°';x.font='600 '+(12/z)+'px system-ui';
+  const w=x.measureText(t).width,cx=(a[0]+b[0])/2,cy=(a[1]+b[1])/2-16/z;x.fillStyle='#1d2733';x.fillRect(cx-w/2-6/z,cy-12/z,w+12/z,21/z);x.fillStyle='#fff';x.fillText(t,cx-w/2,cy+3/z)});x.restore()});
+/* ---------- live cursor position ---------- */
+let cur=null;
+const showCur=()=>{$('cur').textContent=cur?'X '+cur[0].toFixed(2)+'   Y '+(v('sh')-cur[1]).toFixed(2)+' mm':'X –   Y –'};
+canvas.on('mouse:move',o=>{const q=canvas.getPointer(o.e);cur=tool=='measure'?mpt(o.e):(tool=='line'||tool=='drill')?tp(o.e):[q.x,q.y];showCur();if(tool)draw()});
+canvas.upperCanvasEl.addEventListener('mouseleave',()=>{cur=null;showCur();draw()});
+canvas.on('after:render',()=>{if(!tool||!cur)return;const x=canvas.contextContainer,m=canvas.viewportTransform,z=m[0],H=v('sh');
+ let t='X '+cur[0].toFixed(1)+'  Y '+(H-cur[1]).toFixed(1);const last=tool=='line'&&pts.length?pts[pts.length-1]:tool=='measure'&&mp?mp:null;
+ if(last){const dx=cur[0]-last[0],dy=-(cur[1]-last[1]);t+='   L '+Math.hypot(dx,dy).toFixed(1)+'  ∠ '+(Math.atan2(dy,dx)*180/Math.PI).toFixed(0)+'°'}
+ x.save();x.transform(...m);x.strokeStyle='rgba(29,39,51,.55)';x.lineWidth=1/z;x.beginPath();x.moveTo(cur[0]-9/z,cur[1]);x.lineTo(cur[0]+9/z,cur[1]);x.moveTo(cur[0],cur[1]-9/z);x.lineTo(cur[0],cur[1]+9/z);x.stroke();
+ x.font='600 '+(11/z)+'px system-ui';const w=x.measureText(t).width,px=cur[0]+14/z,py=cur[1]+24/z;x.fillStyle='rgba(29,39,51,.92)';x.fillRect(px-5/z,py-12/z,w+10/z,18/z);x.fillStyle='#fff';x.fillText(t,px,py+1/z);x.restore()});
+/* ---------- project save, open, autosave ---------- */
+const PSET=['sw','sh','depth','safe','bit','step','dstep','rpm','feed','plunge','tn','tw','th','pk','airz','jf','js','snap','air'];
+function projectObj(){const st={};PSET.forEach(k=>{const e=$(k);if(e)st[k]=e.type=='checkbox'?e.checked:e.value});return{app:'cnc-studio',v:1,name:$('pname').value,saved:new Date().toISOString(),settings:st,shapes:JSON.parse(pack())}}
+function autosave(){try{localStorage.setItem('cncs',JSON.stringify(projectObj()))}catch(e){}}
+function applyProject(p,quiet){if(!p||p.app!='cnc-studio'||!Array.isArray(p.shapes))return toast('That is not a CNC Studio project file.');
+ Object.entries(p.settings||{}).forEach(([k,val])=>{const e=$(k);if(!e)return;if(e.type=='checkbox')e.checked=!!val;else e.value=val});
+ $('pname').value=p.name||'Untitled project';custom=false;$('gback').hidden=true;fit();restore(JSON.stringify(p.shapes));U.length=0;Rr.length=0;snap();tab(true);if(!quiet)toast('Opened "'+$('pname').value+'" with '+p.shapes.length+' shape'+(p.shapes.length==1?'':'s'))}
+function openProject(f){f.text().then(t=>{let p;try{p=JSON.parse(t)}catch(e){return toast('Could not read that file.')}applyProject(p)})}
+async function saveProject(){const t=JSON.stringify(projectObj(),null,1),nm=(($('pname').value||'project').trim().replace(/[^\w\-]+/g,'_')||'project')+'.cncproj';autosave();
+ try{if(window.showSaveFilePicker){const h=await showSaveFilePicker({suggestedName:nm,types:[{description:'CNC Studio project',accept:{'application/json':['.cncproj']}}]});const w=await h.createWritable();await w.write(t);await w.close();toast('Saved project '+h.name)}else{dlG(t,nm)}}
+ catch(e){if(e.name!='AbortError')dlG(t,nm)}}
+$('psave').onclick=saveProject;$('popen').onclick=()=>$('pfile').click();$('pfile').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)openProject(f)};
+$('pnew').onclick=()=>{if(canvas.getObjects().length&&!confirm('Start a new project? Save first if you want to keep this one.'))return;$('pname').value='Untitled project';custom=false;$('gback').hidden=true;restore('[]');U.length=0;Rr.length=0;snap();tab(true)};
+$('pname').addEventListener('input',autosave);$('side').addEventListener('input',autosave);$('side').addEventListener('change',autosave);canvas.on({'object:modified':autosave,'object:added':autosave,'object:removed':autosave});
+let lt;const live=()=>{clearTimeout(lt);lt=setTimeout(()=>{if(!$('sim').hidden)build()},350)};
+canvas.on({'object:modified':live,'object:added':live,'object:removed':live});$('side').addEventListener('input',live);$('side').addEventListener('change',live);
+new ResizeObserver(()=>fit()).observe($('stage'));$('stage').after($('sim'));fit();let sv=null;try{sv=JSON.parse(localStorage.getItem('cncs')||'null')}catch(e){}if(sv&&sv.shapes&&sv.shapes.length)applyProject(sv,true);else $('s-rect').click();tab(true);
+</script></body></html>
